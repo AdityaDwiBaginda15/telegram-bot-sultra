@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Credentials
+credentials.json
+*.key
+*.pem
+*.json
+
+# Environment variables
+.env
+.env.local
+
+# Railway
+.railway/
