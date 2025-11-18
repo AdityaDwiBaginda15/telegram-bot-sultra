@@ -1,21 +1,5 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-
-# Credentials
-credentials.json
-*.key
-*.pem
+*.toml
 *.json
-
-# Environment variables
+*.key
 .env
-.env.local
-
-# Railway
-.railway/
+config/
