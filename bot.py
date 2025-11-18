@@ -14,36 +14,56 @@ logging.basicConfig(
 
 class RailwaySpreadsheetMonitor:
     def __init__(self):
-        # Ambil dari environment variables (LEBIH AMAN)
-        self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN', '8574193047:AAGiv8OH0zVbHhuwy4k5VxHM3XFgJ3MAljg')
-        self.chat_ids = json.loads(os.getenv('TELEGRAM_CHAT_IDS', '["5713367025", "2084339265"]'))
-        self.spreadsheet_url = os.getenv('SPREADSHEET_URL', 'https://docs.google.com/spreadsheets/d/1wMK-Q1O6zVemeBpsyS9ATFDf8JmEyQR1qWqoVUOBBms/edit')
-        
-        # Google credentials dari environment variable
+        # Ambil dari environment variables
+        self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        self.chat_ids = json.loads(os.getenv('TELEGRAM_CHAT_IDS', '[]'))
+        self.spreadsheet_url = os.getenv('SPREADSHEET_URL')
         self.google_credentials = os.getenv('GOOGLE_CREDENTIALS_JSON')
         
         self.previous_row_count = 0
         self.previous_data = []
         
+        # Validasi environment variables
+        self.validate_config()
+        
         # Setup Google Sheets API
         self.setup_google_sheets()
         
+    def validate_config(self):
+        """Validasi semua environment variables"""
+        missing_vars = []
+        
+        if not self.telegram_token:
+            missing_vars.append('TELEGRAM_BOT_TOKEN')
+        if not self.chat_ids:
+            missing_vars.append('TELEGRAM_CHAT_IDS')
+        if not self.spreadsheet_url:
+            missing_vars.append('SPREADSHEET_URL')
+        if not self.google_credentials:
+            missing_vars.append('GOOGLE_CREDENTIALS_JSON')
+            
+        if missing_vars:
+            error_msg = f"Missing environment variables: {', '.join(missing_vars)}"
+            logging.error(f"❌ {error_msg}")
+            raise ValueError(error_msg)
+            
+        logging.info("✅ All environment variables are set")
+    
     def setup_google_sheets(self):
-        """Setup Google Sheets dengan credentials yang aman"""
+        """Setup Google Sheets dengan credentials dari environment variable"""
         try:
             scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
             
-            if self.google_credentials:
-                # Pakai credentials dari environment variable
-                creds_dict = json.loads(self.google_credentials)
-                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-            else:
-                # Fallback ke file (untuk development)
-                creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+            # PASTI pakai credentials dari environment variable
+            creds_dict = json.loads(self.google_credentials)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
                 
             self.client = gspread.authorize(creds)
             logging.info("✅ Google Sheets API setup successfully")
             
+        except json.JSONDecodeError as e:
+            logging.error(f"❌ Invalid JSON in GOOGLE_CREDENTIALS_JSON: {e}")
+            raise
         except Exception as e:
             logging.error(f"❌ Error setting up Google Sheets: {e}")
             raise
@@ -77,7 +97,6 @@ class RailwaySpreadsheetMonitor:
             logging.error(f"❌ Error accessing spreadsheet: {e}")
             return [], 0
     
-    # ... (fungsi-fungsi lainnya tetap sama, tidak berubah)
     def find_new_rows(self, current_data, current_row_count):
         """Find newly added rows"""
         if self.previous_row_count == 0:
@@ -175,8 +194,13 @@ class RailwaySpreadsheetMonitor:
                     time.sleep(60)
 
 def main():
-    monitor = RailwaySpreadsheetMonitor()
-    monitor.start_monitoring()
+    try:
+        monitor = RailwaySpreadsheetMonitor()
+        monitor.start_monitoring()
+    except Exception as e:
+        logging.error(f"❌ Failed to start monitor: {e}")
+        # Exit dengan error code agar Railway restart
+        exit(1)
 
 if __name__ == "__main__":
     main()
