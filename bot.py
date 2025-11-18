@@ -204,3 +204,23 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def validate_config(self):
+    """Validasi semua environment variables"""
+    # Debug khusus
+    logging.info("🔍 Debug Environment Variables:")
+    logging.info(f"TELEGRAM_BOT_TOKEN exists: {bool(os.getenv('TELEGRAM_BOT_TOKEN'))}")
+    logging.info(f"TELEGRAM_CHAT_IDS exists: {bool(os.getenv('TELEGRAM_CHAT_IDS'))}")
+    logging.info(f"SPREADSHEET_URL exists: {bool(os.getenv('SPREADSHEET_URL'))}")
+    logging.info(f"GOOGLE_CREDENTIALS_JSON exists: {bool(os.getenv('GOOGLE_CREDENTIALS_JSON'))}")
+    
+    # Coba parse GOOGLE_CREDENTIALS_JSON
+    google_creds = os.getenv('GOOGLE_CREDENTIALS_JSON')
+    if google_creds:
+        try:
+            json.loads(google_creds)
+            logging.info("✅ GOOGLE_CREDENTIALS_JSON is valid JSON")
+        except json.JSONDecodeError as e:
+            logging.error(f"❌ GOOGLE_CREDENTIALS_JSON JSON Error: {e}")
+    
+    # Rest of validation...
