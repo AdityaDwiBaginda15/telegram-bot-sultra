@@ -6,68 +6,89 @@ import json
 import logging
 import os
 
-# Setup logging untuk Railway
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+def debug_environment():
+    """Debug comprehensive environment"""
+    logging.info("🔍 === RAILWAY ENVIRONMENT DEBUG ===")
+    
+    # List ALL environment variables (mask sensitive ones)
+    all_vars = dict(os.environ)
+    logging.info(f"📋 Total environment variables: {len(all_vars)}")
+    
+    for key, value in all_vars.items():
+        if any(secret in key.lower() for secret in ['token', 'key', 'credential', 'password']):
+            logging.info(f"   {key}: [HIDDEN - LENGTH: {len(value)}]")
+        else:
+            logging.info(f"   {key}: {value}")
+    
+    # Check our specific variables
+    our_vars = {
+        'TELEGRAM_BOT_TOKEN': os.getenv('TELEGRAM_BOT_TOKEN'),
+        'TELEGRAM_CHAT_IDS': os.getenv('TELEGRAM_CHAT_IDS'),
+        'SPREADSHEET_URL': os.getenv('SPREADSHEET_URL'),
+        'GOOGLE_CREDENTIALS_JSON': os.getenv('GOOGLE_CREDENTIALS_JSON')
+    }
+    
+    logging.info("🔍 === OUR VARIABLES DEBUG ===")
+    for key, value in our_vars.items():
+        exists = value is not None
+        length = len(value) if exists else 0
+        logging.info(f"   {key}: EXISTS={exists}, LENGTH={length}")
+        
+        if exists and key == 'GOOGLE_CREDENTIALS_JSON':
+            try:
+                json.loads(value)
+                logging.info(f"   {key}: ✅ VALID JSON")
+            except json.JSONDecodeError as e:
+                logging.info(f"   {key}: ❌ INVALID JSON: {e}")
+    
+    return our_vars
+
 class RailwaySpreadsheetMonitor:
     def __init__(self):
-        # Ambil dari environment variables
-        self.telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
-        self.chat_ids = json.loads(os.getenv('TELEGRAM_CHAT_IDS', '[]'))
-        self.spreadsheet_url = os.getenv('SPREADSHEET_URL')
-        self.google_credentials = os.getenv('GOOGLE_CREDENTIALS_JSON')
+        # Debug first
+        self.debug_vars = debug_environment()
+        
+        # Get variables
+        self.telegram_token = self.debug_vars['TELEGRAM_BOT_TOKEN']
+        self.chat_ids = json.loads(self.debug_vars['TELEGRAM_CHAT_IDS']) if self.debug_vars['TELEGRAM_CHAT_IDS'] else []
+        self.spreadsheet_url = self.debug_vars['SPREADSHEET_URL']
+        self.google_credentials = self.debug_vars['GOOGLE_CREDENTIALS_JSON']
         
         self.previous_row_count = 0
         self.previous_data = []
         
-        # Validasi environment variables
+        # Validate
         self.validate_config()
-        
-        # Setup Google Sheets API
         self.setup_google_sheets()
         
     def validate_config(self):
-        """Validasi semua environment variables"""
-        missing_vars = []
-        
-        if not self.telegram_token:
-            missing_vars.append('TELEGRAM_BOT_TOKEN')
-        if not self.chat_ids:
-            missing_vars.append('TELEGRAM_CHAT_IDS')
-        if not self.spreadsheet_url:
-            missing_vars.append('SPREADSHEET_URL')
-        if not self.google_credentials:
-            missing_vars.append('GOOGLE_CREDENTIALS_JSON')
-            
-        if missing_vars:
-            error_msg = f"Missing environment variables: {', '.join(missing_vars)}"
+        """Validate configuration"""
+        missing = [k for k, v in self.debug_vars.items() if not v]
+        if missing:
+            error_msg = f"Missing: {', '.join(missing)}"
             logging.error(f"❌ {error_msg}")
             raise ValueError(error_msg)
-            
         logging.info("✅ All environment variables are set")
     
     def setup_google_sheets(self):
-        """Setup Google Sheets dengan credentials dari environment variable"""
+        """Setup Google Sheets"""
         try:
             scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-            
-            # PASTI pakai credentials dari environment variable
             creds_dict = json.loads(self.google_credentials)
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-                
             self.client = gspread.authorize(creds)
             logging.info("✅ Google Sheets API setup successfully")
-            
-        except json.JSONDecodeError as e:
-            logging.error(f"❌ Invalid JSON in GOOGLE_CREDENTIALS_JSON: {e}")
-            raise
         except Exception as e:
-            logging.error(f"❌ Error setting up Google Sheets: {e}")
+            logging.error(f"❌ Google Sheets setup failed: {e}")
             raise
-    
+
+    # ... (rest of the methods remain the same as previous working version)
     def get_sultra25_data(self):
         """Get data from Sultra-25 sheet"""
         try:
@@ -75,7 +96,6 @@ class RailwaySpreadsheetMonitor:
             worksheet = spreadsheet.worksheet("Sultra-25")
             all_data = worksheet.get_all_values()
             
-            # Filter data yang valid
             relevant_data = []
             for i, row in enumerate(all_data):
                 if i >= 3 and len(row) >= 8:
@@ -161,7 +181,6 @@ class RailwaySpreadsheetMonitor:
         logging.info(f"👥 Monitoring for {len(self.chat_ids)} chat IDs")
         logging.info("⏰ 24/7 Real-time monitoring ACTIVE")
         
-        # Initial load
         initial_data, initial_count = self.get_sultra25_data()
         self.previous_row_count = initial_count
         self.previous_data = initial_data
@@ -180,7 +199,7 @@ class RailwaySpreadsheetMonitor:
                     logging.info(f"📨 Sent {success_count}/{len(self.chat_ids)} for: {entry['no']}. {entry['customer_name']}")
                 
                 error_count = 0
-                time.sleep(30)   # Check every 30 seconds
+                time.sleep(30)
                 
             except Exception as e:
                 error_count += 1
@@ -199,28 +218,7 @@ def main():
         monitor.start_monitoring()
     except Exception as e:
         logging.error(f"❌ Failed to start monitor: {e}")
-        # Exit dengan error code agar Railway restart
         exit(1)
 
 if __name__ == "__main__":
     main()
-
-def validate_config(self):
-    """Validasi semua environment variables"""
-    # Debug khusus
-    logging.info("🔍 Debug Environment Variables:")
-    logging.info(f"TELEGRAM_BOT_TOKEN exists: {bool(os.getenv('TELEGRAM_BOT_TOKEN'))}")
-    logging.info(f"TELEGRAM_CHAT_IDS exists: {bool(os.getenv('TELEGRAM_CHAT_IDS'))}")
-    logging.info(f"SPREADSHEET_URL exists: {bool(os.getenv('SPREADSHEET_URL'))}")
-    logging.info(f"GOOGLE_CREDENTIALS_JSON exists: {bool(os.getenv('GOOGLE_CREDENTIALS_JSON'))}")
-    
-    # Coba parse GOOGLE_CREDENTIALS_JSON
-    google_creds = os.getenv('GOOGLE_CREDENTIALS_JSON')
-    if google_creds:
-        try:
-            json.loads(google_creds)
-            logging.info("✅ GOOGLE_CREDENTIALS_JSON is valid JSON")
-        except json.JSONDecodeError as e:
-            logging.error(f"❌ GOOGLE_CREDENTIALS_JSON JSON Error: {e}")
-    
-    # Rest of validation...
