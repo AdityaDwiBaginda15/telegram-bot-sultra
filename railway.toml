@@ -1,0 +1,11 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python bot.py"
+
+[env]
+GOOGLE_CREDENTIALS = "{{env.GOOGLE_CREDENTIALS}}"
+TELEGRAM_BOT_TOKEN = "{{env.TELEGRAM_BOT_TOKEN}}"
+TELEGRAM_CHAT_IDS = "{{env.TELEGRAM_CHAT_IDS}}"
+SPREADSHEET_URL = "{{env.SPREADSHEET_URL}}"
