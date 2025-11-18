@@ -199,7 +199,7 @@ class RailwaySpreadsheetMonitor:
                     logging.info(f"📨 Sent {success_count}/{len(self.chat_ids)} for: {entry['no']}. {entry['customer_name']}")
                 
                 error_count = 0
-                time.sleep(30)
+                time.sleep(15)
                 
             except Exception as e:
                 error_count += 1
@@ -222,3 +222,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
