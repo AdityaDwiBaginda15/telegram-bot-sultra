@@ -1,5 +1,8 @@
+# Kredensial dan config
 *.toml
 *.json
 *.key
 .env
 config/
+secrets/
+credentials/
